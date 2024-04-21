@@ -1,0 +1,1258 @@
+using UnityEngine;
+
+public class Camera_Controller : MonoBehaviour
+{
+    public Transform target; // O objeto que a câmera seguirá
+    public Vector3 positionOffset; // Deslocamento (offset) da câmera em relação ao alvo
+    public Vector3 lookOffset; // Deslocamento (offset) da câmera em relação ao alvo
+    
+    [SerializeField] float _currentFollowSpeed = 5f;
+    
+    void Update()
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        // Calcule a posição alvo ajustada com o offset
+        Vector3 targetPosition = target.position + positionOffset;
+
+        // Interpole suavemente a posição atual da câmera em direção à posição do alvo ajustada
+        transform.position = Vector3.Slerp(transform.position, targetPosition, _currentFollowSpeed * Time.deltaTime);
+
+        // Calcule a direção do alvo a partir da posição atual da câmera
+        Vector3 lookDirection = (target.position - transform.position).normalized - lookOffset;
+
+        // Calcule a rotação desejada para a câmera
+        Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
+
+        // Interpole suavemente a rotação atual da câmera em direção à rotação desejada
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, _currentFollowSpeed * Time.deltaTime);
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Controller_Drone : MonoBehaviour
+{
+
+    public bool isOnControl;
+    public bool isCarryingRobot;
+
+    [SerializeField] float _speed;
+    [SerializeField] float _altituteUpSpeed;
+    [SerializeField] float _altituteDownSpeed;
+    [SerializeField] float rotationSpeed = 5f;
+    
+    // Internal Variables
+    float xMovInput;
+    float zMovInput;
+    Vector3 previousPosition;
+    Rigidbody rb;
+    GameManager gameManager;
+    
+    // Start is called before the first frame update
+    void Start()
+    {
+
+        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if(isOnControl){    
+            HandleInput();
+            MoveCharacter();
+            RotateCharacter();
+            Control_altitute();
+        }
+    }
+    
+    void HandleInput(){
+        xMovInput = Input.GetAxis("Horizontal");
+        zMovInput = Input.GetAxis("Vertical");
+    }
+
+    void MoveCharacter(){
+        transform.position += new Vector3(xMovInput, 0, zMovInput) * Time.deltaTime * _speed;
+    }
+
+    void RotateCharacter(){
+        // Verifica se há alguma entrada de movimento do jogador
+        if (AnyInputHappening())
+        {
+            // Calcula a direção do movimento do personagem
+            Vector3 direction = (transform.position - previousPosition).normalized;
+
+            // Se a direção do movimento não for zero, ou seja, o personagem está se movendo
+            if (direction != Vector3.zero)
+            {
+                // Calcula a rotação desejada usando LookRotation
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+                // Suaviza a rotação atual em direção à rotação desejada usando a interpolação de quaternions
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+    }
+
+    // Atualiza a posição anterior para o próximo quadro
+    previousPosition = transform.position;
+    }
+
+    void Control_altitute(){
+        if(Input.GetKey(KeyCode.Q)){
+            transform.position -= new Vector3(0,_altituteDownSpeed,0) * Time.deltaTime;
+        }
+        if(Input.GetKey(KeyCode.E)){
+            transform.position += new Vector3(0,_altituteUpSpeed,0) * Time.deltaTime;
+        }
+    }
+
+    bool AnyInputHappening(){
+        if(xMovInput != 0 ||  zMovInput != 0){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class Controller_Robot : MonoBehaviour
+{
+    
+    public bool isOnControl;
+    [SerializeField] float _speed;
+    [SerializeField] float rotationSpeed = 5f;
+
+    float xMovInput;
+    float zMovInput;
+    Vector3 previousPosition;
+    Rigidbody rb;
+    
+    void Start()
+    {
+        Physics.gravity = new Vector3(0, -3.0F, 0);
+        rb = GetComponent<Rigidbody>();
+        previousPosition = transform.position;
+    }
+
+    void Update()
+    {
+        if(isOnControl){    
+            HandleInput();
+            MoveCharacter();
+            RotateCharacter();
+        }
+    }
+
+    void HandleInput(){
+        xMovInput = Input.GetAxis("Horizontal");
+        zMovInput = Input.GetAxis("Vertical");
+    }
+
+    void MoveCharacter(){
+        transform.position += new Vector3(xMovInput, 0, zMovInput) * Time.deltaTime * _speed;
+    }
+
+    void RotateCharacter(){
+        // Verifica se há alguma entrada de movimento do jogador
+        if (AnyInputHappening())
+        {
+            // Calcula a direção do movimento do personagem
+            Vector3 direction = (transform.position - previousPosition).normalized;
+
+            // Se a direção do movimento não for zero, ou seja, o personagem está se movendo
+            if (direction != Vector3.zero)
+            {
+                // Calcula a rotação desejada usando LookRotation
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+                // Suaviza a rotação atual em direção à rotação desejada usando a interpolação de quaternions
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+    }
+
+    // Atualiza a posição anterior para o próximo quadro
+    previousPosition = transform.position;
+    }
+
+    bool AnyInputHappening(){
+        if(xMovInput != 0 ||  zMovInput != 0){
+            return true;
+        } else {
+            return false;
+        }
+    }
+} 
+using UnityEngine;
+
+public class DroneAudio : MonoBehaviour
+{
+    public AudioSource audioSource; // Referência ao AudioSource
+    private Transform mainCameraTransform; // Referência ao Transform da câmera principal
+    public float maxDistance = 10f; // Distância máxima em que o áudio será ouvido
+    public float minVolume = 0.1f; // Volume mínimo quando a câmera estiver na distância máxima
+
+    void Start()
+    {
+        // Encontra a câmera principal na cena
+        mainCameraTransform = Camera.main.transform;
+
+        // Se não foi atribuído um AudioSource, tenta encontrar um na mesma GameObject
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+    }
+
+    void Update()
+    {
+        // Calcula a distância entre este objeto e a câmera principal
+        float distanceToCamera = Vector3.Distance(transform.position, mainCameraTransform.position);
+
+        // Calcula o volume com base na distância
+        float volume = Mathf.Clamp(1f - (distanceToCamera / maxDistance), minVolume, 1f);
+
+        // Define o volume do áudio
+        audioSource.volume = volume;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DroneBulletBehavior : MonoBehaviour
+{
+    [SerializeField] ParticleSystem explosionParticles;
+    [SerializeField] float damageRadius = 5f;
+    [SerializeField] int damageAmount = 1;
+
+    void Start()
+    {
+        Destroy(gameObject, 4f);
+    }
+
+    void OnCollisionEnter(Collision other)
+    {
+        Explode();
+    }
+
+    void Explode()
+    {
+        // Instantiate the explosion particles at the collision position
+        Instantiate(explosionParticles, transform.position, Quaternion.identity);
+        // Play the explosion animation
+        explosionParticles.Emit(1);
+
+        // Find all colliders within the damage radius
+        Collider[] colliders = Physics.OverlapSphere(transform.position, damageRadius);
+
+        // Loop through all the colliders
+        foreach (Collider collider in colliders)
+        {
+            // Check if the collider belongs to an enemy
+            if (collider.CompareTag("Turret"))
+            {
+                // Calculate the distance between the collider and the explosion point
+                float distance = Vector3.Distance(transform.position, collider.transform.position);
+                
+                // Calculate damage based on distance from the explosion point
+                int calculatedDamage = Mathf.RoundToInt((1 - (distance / damageRadius)) * damageAmount);
+                
+                // Deal damage to the enemy
+                collider.GetComponent<TurretLife>().DealDamage(calculatedDamage);
+            }
+        }
+
+        // Destroy the bullet
+        Destroy(gameObject);
+    }
+}
+using System.Collections;
+using UnityEngine;
+
+public class DroneShooting : MonoBehaviour
+{
+    [SerializeField] GameObject projectilePrefab;
+    [SerializeField] float projectileSpeed;
+    [SerializeField] AudioClip shootSound;
+    PickPlayer pickPlayer;
+    private bool canShoot;
+
+    void Start()
+    {
+        canShoot = true;
+        pickPlayer = GetComponent<PickPlayer>();
+    }
+
+    void Update()
+    {
+        
+        if (Input.GetMouseButtonDown(0) && canShoot && GameManager.Instance.Current_Character.name == "Player_Drone")
+        {
+            if (!pickPlayer.RobotOnDrone)
+            {
+                ShootProjectile();
+                GameManager.Instance.PlaySound(shootSound);
+            }
+        }
+    }
+
+    void ShootProjectile()
+    {
+        // Get the mouse position in screen space
+        Vector3 mousePosition = Input.mousePosition;
+        mousePosition -= new Vector3(0, 2, 0);
+        // Convert the mouse position to a world position on the plane where the projectile will move
+        mousePosition.z = Camera.main.transform.position.y; // Set the z position to the plane's position
+        Vector3 targetPosition = Camera.main.ScreenToWorldPoint(mousePosition);
+
+        // Instantiate projectile at player's position
+        GameObject projectile = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
+
+        // Calculate the direction to shoot
+        Vector3 shootDirection = (targetPosition - transform.position).normalized;
+
+        // Get the rigidbody component of the projectile
+        Rigidbody rb = projectile.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            // Set the velocity of the rigidbody to shoot the projectile
+            rb.velocity = shootDirection * projectileSpeed;
+        }
+        else
+        {
+            Debug.LogWarning("Rigidbody component not found on projectile prefab.");
+        }
+    }
+
+    IEnumerator BeginShootCooldown(){
+        canShoot = false;
+        yield return new WaitForSeconds(1);
+        canShoot = true;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ExplosionParticleBehavior : MonoBehaviour
+{
+    void Start()
+    {
+        Destroy(this.gameObject, 0.5f);
+    }
+}
+using UnityEngine;
+using DG.Tweening;
+using UnityEngine.SceneManagement;
+
+public class GameManager : MonoBehaviour
+{
+    public static GameManager Instance { get; private set; }
+
+    [Header("UI ELEMENTS")]
+    [SerializeField] RectTransform QuestionScreen1;
+    [SerializeField] RectTransform QuestionScreen2;
+    [SerializeField] RectTransform QuestionScreen3;
+    [SerializeField] RectTransform QuestionScreen4;
+    [SerializeField] Transform pointA;
+    [SerializeField] Transform pointB;
+    [SerializeField] Ease easeType;
+    [SerializeField] float animationDuration;
+
+    [Header("LOGIC")]
+    public bool isQuestionHappening;
+    
+    [Header("Characters")]
+    [SerializeField] public GameObject Current_Character;
+    [SerializeField] Animator playerAnimator;
+    [SerializeField] GameObject Player_drone;
+    [SerializeField] GameObject Player_robot;
+    Controller_Robot controller_Robot;
+    Controller_Drone controller_Drone;
+    [SerializeField] PickPlayer pickPlayer;
+    [Header("Characters Camera Offset and position")]
+    [SerializeField] Vector3 drone_LookOffset;
+    [SerializeField] Vector3 drone_PositionOffset;
+    [SerializeField] Vector3 robot_LookOfsset;
+    [SerializeField] Vector3 robot_PositionOfsset;
+
+    [Header("Towers")]
+    [SerializeField] TowerComponent tower1;
+    [SerializeField] TowerComponent tower2;
+    [SerializeField] TowerComponent tower3;
+    [SerializeField] TowerComponent tower4;
+
+    // Private Variables
+    Camera _camera;
+    Camera_Controller camera_controller;
+    int towers_hacked = 0;
+    AudioSource audioSource;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
+        
+        DontDestroyOnLoad(gameObject);
+        _camera = Camera.main; // get main camera used on scene
+        audioSource = GetComponent<AudioSource>(); // Gets audio source component
+        camera_controller = _camera.GetComponent<Camera_Controller>(); // get camera controller
+        controller_Robot = GameObject.FindAnyObjectByType<Controller_Robot>();
+        controller_Drone = GameObject.FindAnyObjectByType<Controller_Drone>();
+        
+        isQuestionHappening = false;    
+
+        // SET UP INITIAL CHARACTER
+        Current_Character = Player_drone;
+        camera_controller.positionOffset = drone_PositionOffset;
+        camera_controller.lookOffset = drone_LookOffset;
+
+    }
+
+    void Update(){
+        if(Input.GetKeyDown(KeyCode.Space)){
+            ChangeCharacter();
+        }
+        
+    }
+
+    public void ChangeCharacter(){
+        // Alterna entre Drone e Robô
+        if (Current_Character == Player_robot) {
+            camera_controller.target = Player_drone.transform;
+            camera_controller.positionOffset = drone_PositionOffset;
+            camera_controller.lookOffset = drone_LookOffset;
+
+            Current_Character = Player_drone;
+            controller_Robot.isOnControl = false;
+            controller_Drone.isOnControl = true;
+        } 
+        // Se o jogador atual for o drone, alterna para o robô
+        else {
+            playerAnimator.SetTrigger("IsIdle");
+            // checar se o robo não está atracado no drone
+            if(!pickPlayer.RobotOnDrone){
+                camera_controller.target = Player_robot.transform;
+                camera_controller.positionOffset = robot_PositionOfsset;
+                camera_controller.lookOffset = robot_LookOfsset;
+
+                Current_Character = Player_robot;
+                controller_Robot.isOnControl = true;
+                controller_Drone.isOnControl = false;
+            }
+            
+        }
+    }
+
+    // TOWER FUNCTIONALITY 
+    // ativa objeto de ui da pergunta
+    // quando a pergunta for respondida corretamente 
+    public void SetQuestion(int index){
+        switch(index){
+            case 1:
+                if(Current_Character != Player_robot) ChangeCharacter(); // Se o personagem ativo for o drone muda
+                PopUpQuestionScreen(QuestionScreen1);
+                Time.timeScale = 0.2f;
+            break;
+            case 2:
+                if(Current_Character != Player_robot) ChangeCharacter();
+                PopUpQuestionScreen(QuestionScreen2);
+                Time.timeScale = 0.2f;
+
+            break;
+            case 3:
+                if(Current_Character != Player_robot) ChangeCharacter();
+                PopUpQuestionScreen(QuestionScreen3);
+                Time.timeScale = 0.2f;
+
+            break;
+            case 4:
+                if(Current_Character != Player_robot) ChangeCharacter();
+                PopUpQuestionScreen(QuestionScreen4);
+                Time.timeScale = 0.2f;
+
+            break;
+        }
+    }
+
+    void PopUpQuestionScreen(RectTransform uiObject){
+        // Definir a posição inicial do objeto de UI no ponto A
+        uiObject.position = pointA.position;
+
+        // Iniciar a animação utilizando o DoTween
+        uiObject.DOMove(pointB.position, animationDuration).SetEase(easeType); // Movendo o objeto para o ponto B
+        
+    }
+
+    public void TowerHacked(){
+        towers_hacked += 1;
+        CheckAllTowersHacked();
+    }
+
+    public void CheckAllTowersHacked(){
+        if(towers_hacked >= 4){
+            GameWon();
+        }
+    }
+
+    public void RestoreTime(){
+        Time.timeScale = 1f;
+    }
+
+    void GameWon(){
+        SceneManager.LoadScene(1);
+    }
+
+    public void GameOver(){
+        // u failed in save the world
+    }
+
+    public void PlaySound(AudioClip sound){
+        audioSource.clip = sound;
+        audioSource.Play();
+
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class HackingAreaBehavior : MonoBehaviour
+{
+
+    TowerComponent towerComponent;
+    [SerializeField] float hackingDamage;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        towerComponent = transform.parent.gameObject.GetComponent<TowerComponent>();
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    void OnTriggerStay(Collider other)
+    {
+        if(!towerComponent.questionSet){    
+            if(other.gameObject.name == "Player_Robot"){
+                towerComponent.resistence -= hackingDamage * Time.deltaTime;
+            }
+        }
+        
+    }
+}
+using UnityEngine;
+
+public class HackingSound : MonoBehaviour
+{
+    public AudioSource triggerSound; // Assign the trigger sound to this in the Unity Inspector
+
+    void Start()
+    {
+        triggerSound = GetComponent<AudioSource>();
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        // Check if the object entering the trigger is the player
+        if(other.gameObject.name == "Player_Robot"){
+            // Start playing the trigger sound
+            if (!triggerSound.isPlaying)
+            {
+                triggerSound.Play();
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if(other.gameObject.name == "Player_Robot"){
+            triggerSound.Stop();
+            
+        }
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEngine;
+
+public class IDamagable : MonoBehaviour
+{
+    
+    public int currentLife;
+    public int maxLife;
+
+    void Start(){
+        currentLife = maxLife;
+    }
+
+    public void DealDamage(int quantity){
+        currentLife -= quantity;
+        if(currentLife <= 0) Die();
+    }
+
+    public void RecoverLife(int quantity){
+        if(currentLife + quantity > maxLife) currentLife = maxLife;
+        else currentLife += quantity;
+    }
+
+    void Die(){
+        // tocar sistema de particulas (explosao) na posiçao do player
+        GameManager.Instance.GameOver(); 
+        Destroy(this.gameObject);
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LookAtCamera : MonoBehaviour
+{
+    private Camera mainCamera;
+
+    void Start()
+    {
+        // Find the main camera in the scene
+        mainCamera = Camera.main;
+    }
+
+    void Update()
+    {
+        if (mainCamera != null)
+        {
+            // Calculate the direction from the canvas to the camera
+            Vector3 lookDir = mainCamera.transform.position - transform.position;
+
+            // Ensure the canvas faces the camera but stays upright
+            transform.rotation = Quaternion.LookRotation(-lookDir, Vector3.up);
+        }
+        else
+        {
+            Debug.LogWarning("Main camera not found in the scene!");
+        }
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEngine;
+
+public class PickPlayer : MonoBehaviour
+{
+
+    public bool RobotOnDrone; 
+    public GameObject playerRobot; 
+
+    void Awake(){
+        
+    }
+
+    void Update(){    
+        CarryPlayer();
+        if(Input.GetKeyDown(KeyCode.P)){
+            PickPlayerUp();
+            
+        }
+    }
+
+    void PickPlayerUp(){
+        if(!RobotOnDrone){            
+            RaycastHit hit;            
+            if (Physics.Raycast(transform.position, -transform.up, out hit, 1f, 3)){
+                RobotOnDrone = true;    
+            }
+        } else {
+            RobotOnDrone = false;
+        }
+
+    }
+
+    void CarryPlayer(){
+        if(RobotOnDrone){
+            if(playerRobot){
+                playerRobot.transform.position = transform.position - new Vector3(0,0.3f,0);
+                playerRobot.transform.rotation = transform.rotation;
+            }
+            
+        }
+    }
+
+}
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TowerComponent : MonoBehaviour
+{
+    // Variáveis públicas acessíveis no Inspector
+    public float resistence;
+    public Slider resistenceBarSlider;
+    public float maxResistenceValue = 100f;
+    [SerializeField] GameObject sliderObject;
+    [SerializeField] int questionIndex;
+    [SerializeField] GameObject Question;
+
+    [SerializeField] GameObject GreenEnergy;
+    [SerializeField] GameObject RedEnergy;
+    
+    // Variável para controlar se a pergunta já foi definida
+    public bool questionSet = false;
+    public bool hacked = false;
+
+    // Chamado uma vez no início do script
+    void Start()
+    {
+        questionSet = false;
+        // Configura o valor inicial do Slider
+        UpdateSliderValue(maxResistenceValue);
+    }
+
+    // Chamado a cada frame
+    void Update()
+    {
+        UpdateSliderValue(maxResistenceValue); // Atualiza a UI do Slider de resistencia da torres
+        
+        CheckResistance();
+    }
+
+    // Verifica a resistência e realiza ações com base nela
+    void CheckResistance()
+    {
+
+        // Se o objeto do slider existir, atualize o valor do Slider
+        if (sliderObject)
+        {
+            // Se a resistência for menor ou igual a 20 e a pergunta ainda não foi definida
+            if (resistence <= 20 && !questionSet)
+            {
+                // Define a pergunta e marca que a ação foi realizada
+                GameManager.Instance.SetQuestion(questionIndex);
+                questionSet = true;
+            }
+
+            // Se a resistência for menor ou igual a 0, desative o objeto do slider
+            if (resistence <= 0)
+            {
+                sliderObject.SetActive(false);
+            }            
+        }
+
+    }
+
+    // Atualiza o valor do Slider com base na resistência atual
+    void UpdateSliderValue(float maxResistenceValue)
+    {
+        // Se o objeto do slider existir, atualize o valor do Slider
+        if (sliderObject)
+        {
+            // Calcula o valor relativo do Slider com base na resistência e no valor máximo de resistência
+            float sliderValue = resistence / maxResistenceValue;
+            resistenceBarSlider.value = sliderValue;
+        }
+    }
+
+    public void CorrectAnswer(){
+            // avisa o gameManager
+            Destroy(Question); // retira o pop up da tela
+            hacked = true;
+            resistence = 0;
+            Destroy(sliderObject);
+            GameManager.Instance.RestoreTime(); // volta o tempo ao normal
+            GameManager.Instance.TowerHacked(); // avisa o GameManager que uma torre foi hackeada
+            GameObject go = Instantiate(RedEnergy, GreenEnergy.transform.position, Quaternion.identity);
+            go.transform.localScale = new Vector3(2.105425f,2.105425f,2.105425f);
+            
+            Destroy(GreenEnergy);
+            
+        }
+    
+    public void IncorrectAnswer(){
+        ResetTower();
+        GameManager.Instance.RestoreTime(); // volta o tempo ao normal
+    }
+
+    // Chamada para resetar as propriedades da torre
+    public void ResetTower(){
+        questionSet = false;
+        resistence = maxResistenceValue;
+        Question.transform.position -= new Vector3(0,1000,0);
+    }
+
+    // resposta incorreta - Resetar torre
+    // colocar pergunta embaixo da tela de novo
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEditor.Rendering;
+using UnityEngine;
+
+public class TurretBulletBehavior : MonoBehaviour
+{
+
+    [SerializeField] float speed = 5f;
+
+    void Update()
+    {
+        transform.Translate(Vector3.forward  * Time.deltaTime * speed);
+    }
+
+    void OnCollisionEnter(Collision other)
+    {
+        if(other.gameObject.CompareTag("Turret")){
+            return;       
+        } 
+        if(other.gameObject.CompareTag("Player")){
+            other.gameObject.GetComponent<IDamagable>().DealDamage(3);
+            
+            Destroy(this.gameObject);
+        } else {
+            Destroy(this.gameObject);
+        }
+    }
+}
+using System.Collections;
+using UnityEngine;
+
+public class TurretController : MonoBehaviour
+{
+
+    public GameObject target; // O alvo para o qual a torreta deve girar
+    public Transform TurretHead;
+    public float rotationSpeed = 5f; // Velocidade de rotação da torreta
+
+    public float shootCoolDown = 1f; // Tempo de espera entre os disparos
+    public GameObject bullet; // Prefab da bala
+    public Transform bulletPoint; // Ponto de origem do disparo
+    private bool canShoot = true; // Flag para controlar se a torreta pode disparar
+    public float maxRange = 10f; // Tempo de espera entre os disparos
+
+    private AudioSource shootSound;
+    
+    void Start()
+    {
+        shootSound = GetComponent<AudioSource>();
+        target = GameObject.Find("Player_Drone");
+    }
+
+    void Update()
+    {
+        if (target != null)
+        {
+            if(Vector3.Distance(transform.position, target.transform.position) <= maxRange){    
+                // checar se o player está em distancia de tiro
+                // Calcula a direção do alvo
+                Vector3 targetDirection = target.transform.position - transform.position;
+                // Calcula a rotação necessária para mirar no alvo
+                Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
+                // Aplica o Slerp para suavizar a rotação em todas as três dimensões
+                TurretHead.rotation = Quaternion.Slerp(TurretHead.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+
+                // Verifica se a torreta pode disparar e se a tecla de disparo foi pressionada
+                if (canShoot)
+                {
+
+                    Shoot(); // Dispara a torreta
+                    shootSound.Play();
+                }
+                } else {
+                    return;
+                }
+            }
+    }
+
+    void Shoot()
+    {
+        // Instancia uma nova bala na posição do ponto de origem do disparo
+        Instantiate(bullet, bulletPoint.position, bulletPoint.rotation);
+
+        // Inicia a contagem do cooldown
+        StartCoroutine(BeginShootCooldown());
+    }
+
+    IEnumerator BeginShootCooldown()
+    {
+        canShoot = false; // A torreta não pode atirar durante o cooldown
+        yield return new WaitForSeconds(shootCoolDown); // Aguarda o tempo de cooldown
+        canShoot = true; // A torreta pode atirar novamente após o cooldown
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class TurretLife : MonoBehaviour
+{
+    public float currentLife;
+    public float maxLife;
+
+    void Start(){
+        currentLife = maxLife;
+    }
+
+    public void DealDamage(int quantity){
+        currentLife -= quantity;
+        if(currentLife <= 0) Die();
+    }
+
+    public void RecoverLife(int quantity){
+        if(currentLife + quantity > maxLife) currentLife = maxLife;
+        else currentLife += quantity;
+    }
+
+    void Die(){
+        Destroy(this.gameObject);
+        // tocar sistema de particulas (explosao) na posiçao da torreta
+        
+    }
+}
+using UnityEngine;
+
+public class WalkingSound : MonoBehaviour
+{
+    public AudioSource footstepSound; // Assign the footstep sound to this in the Unity Inspector
+    public float walkingSpeed = 5f; // Adjust this according to your character's walking speed
+    public float raycastDistance = 0.1f; // Distance to cast the ray downwards
+
+    private void Update()
+    {
+        if(GameManager.Instance.Current_Character.name == "Player_Robot"){
+            // Check if character is grounded
+            if (IsGrounded())
+            {
+                // Check if character is walking
+                if (Input.GetAxis("Vertical") != 0 || Input.GetAxis("Horizontal") != 0)
+                {
+                    if (!footstepSound.isPlaying) // Check if the sound is not already playing
+                    {
+                        footstepSound.Play(); // Start playing the footstep sound
+                    }
+                }
+                else
+                {
+                    footstepSound.Stop(); // Stop playing the sound if not walking
+                }
+            }
+            else
+            {
+                footstepSound.Stop(); // Stop playing the sound if not grounded
+            }
+
+        } else {
+            footstepSound.Stop(); // Stop playing the sound if current character is not the robot lol 
+        }
+        
+    }
+
+    private bool IsGrounded()
+    {
+        // Cast a ray downwards to check if grounded
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, -Vector3.up, out hit, raycastDistance))
+        {
+            // Check if the object hit has the tag "Ground"
+            if (hit.collider.CompareTag("Ground"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
+using UnityEngine;
+
+public class menuManager : MonoBehaviour
+{
+    [SerializeField] Animator animator;
+    
+    public void StartGame(){
+        StartCoroutine(StartGameSequence());
+    }
+
+    IEnumerator StartGameSequence(){
+        animator.SetTrigger("Start");
+        yield return new WaitForSeconds(2);
+        SceneManager.LoadScene(1);
+
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class PavileBehavior : MonoBehaviour
+{
+
+    bool canMove;
+    [SerializeField] float pavileViewDistance;
+    [SerializeField] float pavileExplosionDistance;
+    [SerializeField] ParticleSystem explosionParticles;
+
+    [SerializeField] float damageRadius = 5f;
+    [SerializeField] int damageAmount = 1;
+
+    GameObject playerObject;
+    NavMeshAgent navMeshAgent;
+    private bool canShoot;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        canMove = true;
+        playerObject = GameObject.Find("Player_Robot");
+        navMeshAgent = GetComponent<NavMeshAgent>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        MoveToPlayer();
+    }
+
+    void MoveToPlayer(){
+        if(canMove){
+            if(Vector3.Distance(transform.position, playerObject.transform.position) < pavileViewDistance){
+                print("player detect");
+                navMeshAgent.SetDestination(playerObject.transform.position);
+                if(Vector3.Distance(transform.position, playerObject.transform.position) < pavileExplosionDistance){
+                    Explode();
+                    Destroy(this.gameObject);
+                    canMove = false;
+                }
+            }
+            else{
+                return;
+            }
+        }
+
+    }
+    void Explode(){
+
+        Instantiate(explosionParticles, transform.position, Quaternion.identity);
+        // Play the explosion animation
+        explosionParticles.Emit(1);
+
+        Collider[] colliders = Physics.OverlapSphere(transform.position, damageRadius);
+        // Loop through all the colliders
+        foreach (Collider collider in colliders)
+        {
+            // Check if the collider belongs to an enemy
+            if (collider.CompareTag("Player"))
+            {
+                // Calculate the distance between the collider and the explosion point
+                float distance = Vector3.Distance(transform.position, collider.transform.position);
+                
+                // Deal damage to the enemy
+                collider.GetComponent<IDamagable>().DealDamage(damageAmount);
+            }
+        }
+
+        Destroy(this.gameObject);
+    }
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AnimationController : MonoBehaviour
+{
+
+    [SerializeField] Animator animator;
+    Controller_Robot controller_Robot;
+    public bool isOnHackingArea;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        animator.SetTrigger("IsIdle");
+        isOnHackingArea = false;
+        controller_Robot = GetComponent<Controller_Robot>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if(controller_Robot.isOnControl){
+            if(!isOnHackingArea){    
+                if(Input.GetAxisRaw("Horizontal") != 0  || Input.GetAxisRaw("Vertical") != 0){
+                    animator.SetTrigger("IsWalking");
+                } else {
+                    animator.SetTrigger("IsIdle");
+                }
+            }
+        }    
+        if(isOnHackingArea){
+            animator.SetTrigger("isHacking");
+            
+        }    
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.CompareTag("HackingArea")){
+            isOnHackingArea = true;
+        }
+
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if(other.gameObject.CompareTag("HackingArea")){
+            isOnHackingArea = false;
+        }
+    }
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class YallAnimationController : MonoBehaviour
+{
+    private float xMovInput;
+    private float zMovInput;
+    public float tiltSpeed = 5f; // velocidade de inclinação do drone
+
+    Controller_Drone controller_Drone;
+    
+    void Start(){
+        controller_Drone = GetComponent<Controller_Drone>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        HandleInputForYall();
+        yallDrone(); // chama a função para inclinar o drone
+    }
+
+    void yallDrone()
+    {
+        if(controller_Drone.isOnControl){
+            // Calcula a inclinação do drone com base nos inputs do jogador
+            Quaternion targetRotation = Quaternion.Euler(zMovInput * tiltSpeed, transform.localRotation.y, -xMovInput * tiltSpeed);
+            // Suaviza a transição da rotação atual para a rotação desejada
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, targetRotation, Time.deltaTime * tiltSpeed);    
+        }
+    }
+
+    void HandleInputForYall()
+    {
+        xMovInput = Input.GetAxisRaw("Horizontal");
+        zMovInput = Input.GetAxisRaw("Vertical");
+    }
+}
+using System.Collections;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class GruntBehavior : MonoBehaviour
+{
+    
+    [SerializeField] GameObject gruntBullet;
+    [SerializeField] GameObject GunPoint;
+    [SerializeField] float grunchViewDistance;
+    [SerializeField] float grunchShootDistance;
+    [SerializeField] AudioClip laserSound;
+
+    GameObject playerObject;
+    NavMeshAgent navMeshAgent;
+    private bool canShoot;
+
+    void Start()
+    {
+        canShoot = true;
+        playerObject = GameObject.Find("Player_Robot");
+        navMeshAgent = GetComponent<NavMeshAgent>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        MoveToPlayer();
+    }
+
+    void MoveToPlayer(){
+        if(Vector3.Distance(transform.position, playerObject.transform.position) < grunchViewDistance){
+            print("player detect");
+            navMeshAgent.SetDestination(playerObject.transform.position);
+            if(Vector3.Distance(transform.position, playerObject.transform.position) < grunchShootDistance && canShoot){
+                Shoot();
+                GameManager.Instance.PlaySound(laserSound);
+            }
+            
+        }
+        else{
+            return;
+        }
+    }
+
+    void Shoot(){
+        StartCoroutine(BeginShootCooldown());
+        // Instancia uma nova bala na posição do ponto de origem do disparo
+        Instantiate(gruntBullet, GunPoint.transform.position, GunPoint.transform.rotation);
+    }
+
+    IEnumerator BeginShootCooldown(){
+        canShoot = false;
+        yield return new WaitForSeconds(2);
+        canShoot = true;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GruntBulletBehavior : MonoBehaviour
+{
+    [SerializeField] ParticleSystem explosion;
+    [SerializeField] float speed = 5f;
+    
+    void Update()
+    {
+        transform.Translate(Vector3.forward  * Time.deltaTime * speed);
+    }
+    void OnCollisionEnter(Collision other)
+    {
+        if(other.gameObject.CompareTag("Enemy")){ // ignore self
+            return;       
+        } 
+        if(other.gameObject.CompareTag("Player")){
+            other.gameObject.GetComponent<IDamagable>().DealDamage(1);
+            Instantiate(explosion, transform.position, Quaternion.identity);
+            // Play the explosion animation
+            explosion.Emit(1);
+            Destroy(this.gameObject);
+        } else {
+            Instantiate(explosion, transform.position, Quaternion.identity);
+            // Play the explosion animation
+            explosion.Emit(1);
+            Destroy(this.gameObject);
+        }
+
+    }
+}

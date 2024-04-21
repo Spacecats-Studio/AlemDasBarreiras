@@ -1,0 +1,102 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Controller_Drone : MonoBehaviour
+{
+
+
+
+    public bool isOnControl;
+    public bool isCarryingRobot;
+
+
+
+    
+    [SerializeField] float _speed;
+    [SerializeField] float _altituteUpSpeed;
+    [SerializeField] float _altituteDownSpeed;
+    [SerializeField] float rotationSpeed = 5f;
+    
+
+    
+
+
+    // Internal Variables
+    float xMovInput;
+    float zMovInput;
+    Vector3 previousPosition;
+    Rigidbody rb;
+    GameManager gameManager;
+    
+    
+    
+    // Start is called before the first frame update
+    void Start()
+    {
+
+        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if(isOnControl){    
+            HandleInput();
+            MoveCharacter();
+            RotateCharacter();
+            Control_altitute();
+        }
+    }
+    
+    void HandleInput(){
+        xMovInput = Input.GetAxis("Horizontal");
+        zMovInput = Input.GetAxis("Vertical");
+    }
+
+    void MoveCharacter(){
+        transform.position += new Vector3(xMovInput, 0, zMovInput) * Time.deltaTime * _speed;
+    }
+
+    void RotateCharacter(){
+        // Verifica se há alguma entrada de movimento do jogador
+        if (AnyInputHappening())
+        {
+            // Calcula a direção do movimento do personagem
+            Vector3 direction = (transform.position - previousPosition).normalized;
+
+            // Se a direção do movimento não for zero, ou seja, o personagem está se movendo
+            if (direction != Vector3.zero)
+            {
+                // Calcula a rotação desejada usando LookRotation
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+                // Suaviza a rotação atual em direção à rotação desejada usando a interpolação de quaternions
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            }
+    }
+
+    // Atualiza a posição anterior para o próximo quadro
+    previousPosition = transform.position;
+    }
+
+
+    void Control_altitute(){
+        if(Input.GetKey(KeyCode.Q)){
+            transform.position -= new Vector3(0,_altituteDownSpeed,0) * Time.deltaTime;
+        }
+        if(Input.GetKey(KeyCode.E)){
+            transform.position += new Vector3(0,_altituteUpSpeed,0) * Time.deltaTime;
+        }
+    }
+
+    bool AnyInputHappening(){
+        if(xMovInput != 0 ||  zMovInput != 0){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+}
