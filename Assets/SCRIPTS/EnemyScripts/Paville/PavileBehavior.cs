@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class PavileBehavior : MonoBehaviour
+public class PavileBehavior : MonoBehaviour, IDamagaeble
 {
 
+    [Header("Basic Info")]
+    [SerializeField] float currentLife;
+    [SerializeField] float maxLife;
 
     bool canMove;
     [SerializeField] float pavileViewDistance;
@@ -18,10 +21,10 @@ public class PavileBehavior : MonoBehaviour
     GameObject playerObject;
     NavMeshAgent navMeshAgent;
     private bool canShoot;
-
-    // Start is called before the first frame update
+    
     void Start()
     {
+        currentLife = maxLife;
         canMove = true;
         playerObject = GameObject.Find("Player_Robot");
         navMeshAgent = GetComponent<NavMeshAgent>();
@@ -74,6 +77,18 @@ public class PavileBehavior : MonoBehaviour
         }
 
         Destroy(this.gameObject);
+    }
+
+
+    public void DealDamage(){
+        currentLife -= 1;
+        if(currentLife <= 0) Die();
+    }
+
+    void Die(){
+        Destroy(this.gameObject);
+        Instantiate(explosionParticles, transform.position, Quaternion.identity);
+        explosionParticles.Emit(1);
     }
 
 

@@ -110,7 +110,6 @@ GameObject:
   - component: {fileID: 8878069134824757006}
   - component: {fileID: 8878069134824757004}
   - component: {fileID: 8878069134824757005}
-  - component: {fileID: 3100275727235833831}
   m_Layer: 0
   m_Name: Grunt
   m_TagString: Turret
@@ -159,11 +158,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22214d2a9fa420c449fc363750f90a47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentLife: 0
+  maxLife: 2
+  grunchViewDistance: 18
+  grunchShootDistance: 13
+  explosionParticles: {fileID: 1527278510957082152, guid: a15644fd181f9094fa4edcab6f99cbf6,
+    type: 3}
   gruntBullet: {fileID: 8425470806433590440, guid: 00a748d5e63795943adb131ca4c0bfc8,
     type: 3}
   GunPoint: {fileID: 8878069136630798607}
-  grunchViewDistance: 18
-  grunchShootDistance: 13
   laserSound: {fileID: 8300000, guid: c65d12a4f98bdcd4b83d883d2b0a5508, type: 3}
 --- !u!195 &8878069134824757004
 NavMeshAgent:
@@ -203,20 +206,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
---- !u!114 &3100275727235833831
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8878069134824757000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7a085c7f75e0a44bbea89743e2b2fdf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  currentLife: 0
-  maxLife: 2
 --- !u!1 &8878069135341816989
 GameObject:
   m_ObjectHideFlags: 0
