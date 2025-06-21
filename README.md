@@ -49,8 +49,7 @@ Sua missão? Invadir a ilha de uma corporação maligna e destruir todas as ante
 
 Assista ao gameplay completo no YouTube:
 
-👉 [Demo Gameplay - Drone Revenge]([https://www.youtube.com/watch?v=SEU-LINK-AQUI](https://www.youtube.com/watch?v=BBH4H1TciKw&t=4s))
-[Gameplay Link](https://www.youtube.com/watch?v=SEU-LINK-AQUI](https://www.youtube.com/watch?v=BBH4H1TciKw&t=4s))
+👉 [Demo Gameplay - Drone Revenge](https://www.youtube.com/watch?v=BBH4H1TciKw&t=4s)
 
 ---
 
